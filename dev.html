@@ -35,13 +35,23 @@
     <script>
       $.lottery({
         el: '.lotterybox',
-        api: './sample-data.json',
+        api: './result.json',
         once: true,
         title: "name",
         subtitle: "company",
         // desc: "title",
         timeout: 10,
-        speed: 500
+        speed: 180,
+        lotteryList: [{
+            name: "主创签名海报",
+            count: 5
+        }, {
+            name: "主创签名画册",
+            count: 2
+        }, {
+            name: "主创签名黑胶",
+            count: 1
+        }]
       });
     </script>
 

@@ -15,7 +15,7 @@
     winners: [],
     winnerList: [],
     winnerHistory: [],
-    number: 1,
+    number: 10,
     _round: 0,
     $el: null
   }
@@ -80,6 +80,9 @@
         <div class='dh-modal-background'></div>\
         <div class='dh-modal-content'>\
         </div>\
+        <div class='dh-modal-prizename'>\
+          " + currentPrize.name + "\
+        </div>\
         <button class='dh-modal-close'></button>\
       </div>\
     ");
@@ -98,16 +101,27 @@
         </div>\
       </div>\
     ");
+
+    var prize = $(`
+      <h2 class="PrizeStatus">本轮奖品：${currentPrize.name}, 数量：${currentPrize.count}</h2>
+    `)
     lotteryBoxEl.append(svgIcons);
     lotteryBoxEl.append(selectorbox);
     lotteryBoxEl.append(container);
     lotteryBoxEl.append(history);
+    lotteryBoxEl.append(prize);
     if(settings.showbtn) lotteryBoxEl.append(btn);
     dom.append(lotteryBoxEl);
     dom.append(modal);
 
     //注册dom事件
+    // 开始抽奖
     $('#dh-lottery-go').click(function() {
+      let prizeList = settings.lotteryList;
+      if( settings.winnerHistory.length > prizeList.length ){
+        alert('本次抽奖已结束');
+        return;
+      }
       if (lotteryInterval) {
         return stopLottery();
       } else {
@@ -115,6 +129,11 @@
       }
     });
     $('#dh-lottery-winner .dh-modal-close').click(function() {
+      currentPrize = settings.lotteryList[currentOrder];
+      if( currentPrize ){
+        settings.number = currentPrize.count;
+        $('.PrizeStatus').html(`本轮奖品：${currentPrize.name}, 数量：${currentPrize.count}`)
+      }
       return $('#dh-lottery-winner').removeClass('is-active');
     });
     $('#dh-lottery-history .dh-modal-close').click(function() {
@@ -200,9 +219,9 @@
               <div class="profile__wrapper">
                 <div class="profile__content">` + (function(){
                   if (item.avatar) {
-                    return `<div class="avatar"><span class="image avatar-image is-128x128"><img src="${item.avatar}" alt="avatar" /></span></div`
+                    return `<div class="avatar"><span class="image avatar-image is-32x32"><img src="${item.avatar}" alt="avatar" /></span></div`
                   } else {
-                    return `<div class="avatar"><span class="image dh-name-avatar avatar-image is-128x128">${item.data[settings.title] || item.name}</span></div>`
+                    return `<div class="avatar"><span class="image dh-name-avatar avatar-image is-32x32">${item.data[settings.title] || item.name}</span></div>`
                   }
                 })()
                 + `</div>
@@ -231,8 +250,12 @@
   }
 
   //一些微小的准备工作
+  var currentOrder = 0;
+  var currentPrize;
   var readyLottery = function(){
     settings.$el = $(settings.el);
+    currentPrize = settings.lotteryList[currentOrder];
+    settings.number = currentPrize.count;
     if(localStorage.getItem('lotteryHistory')) settings.winnerHistory = JSON.parse(localStorage.getItem('lotteryHistory'));
     initDom(settings.$el);
     $.each(settings.data, function(index,item){
@@ -282,7 +305,6 @@
     var el = $(`
       <div class='profile-item'>
         <div class='avatar-image'>
-          <h1>${crownIconHtml}</h1>
           <div class='avatar'><span class='image avatar-image'><img src='' alt='avatar' /></span></div>
         </div>
         <h2 class='profile-name'></h2>
@@ -292,6 +314,7 @@
     `)
     var cardSubTitle, cardTitle, cardDesc;
     if (winnerProfile) {
+      console.log('winnerProfile:::', winnerProfile );
 
       if (winnerProfile['data'] && Object.keys(winnerProfile['data']).length > 0) {
         cardTitle = winnerProfile['data'][settings.title];
@@ -300,7 +323,7 @@
       }
 
       var profileName = cardTitle || winnerProfile['name']
-      var profileSubtitle = cardSubTitle || winnerProfile['company']
+      var profileSubtitle = cardSubTitle || winnerProfile['user_id']
       var profileDesc = cardDesc || ""
 
       if (winnerProfile['avatar']) {
@@ -348,6 +371,7 @@
     // 清空中奖dom和本轮获奖者名单
     $("#dh-lottery-winner .dh-modal-content").html("");
     settings.winners = [];
+    $('.dh-modal-prizename').text( currentPrize.name );
     // 更新本轮中奖者信息
     for (var i = 0; i < currentTarget.length; i++) {
       var winnerProfile = JSON.parse(decodeURIComponent($($('.profile')[currentTarget[i]]).data('profile')));
@@ -382,6 +406,7 @@
     // 保存中奖信息到中奖纪录
     var history = {};
     history.time = (new Date()).toLocaleString();
+    history.prize = currentPrize.name
     // 把获奖名单的数组转对象
     history.winner = {};
     for (var w in settings.winners) history.winner[w] = settings.winners[w];
@@ -412,6 +437,7 @@
     lotteryInterval = setInterval(runLottery, settings.speed);
     if (settings.timeout) lotteryTimeout = setTimeout(stopLottery, settings.timeout * 1000);
     $('#dh-lottery-go').removeClass('primary').addClass('success').html(okayIconHtml);
+    currentOrder += 1;
     return true;
   }
 
@@ -431,7 +457,7 @@
       <div class='dh-history-item'>
         <div class='dh-history-info'>
           <h1>${data.i}</h1>
-          <p>${data.time}</p>
+          <p>${data.time} -- ${data.prize}</p>
         </div>
         <div class='dh-history-user'>
         </div>
@@ -441,12 +467,16 @@
       <div>
         ` + (function () {
           if (data.avatar) {
-            return `<div class="avatar"><span class="image avatar-image is-128x128"><img src="${data.avatar}" alt="avatar" /></span></div`
+            return `<div class="avatar">
+                <span class="image avatar-image is-64x64">
+                  <img src="${data.avatar}" alt="avatar" />
+                </span>
+              </div`
           } else {
-            return `<div class="avatar"><span class="image dh-name-avatar avatar-image is-128x128">${data.data[settings.title] || data.name}</span></div>`
+            return `<div class="avatar"><span class="image dh-name-avatar avatar-image is-64x64">${data.name}</span></div>`
           }
         })() + `
-        <h3 class='name'>${data.data[settings.title] || data.name}</h3>
+        <h3 class='name'><a href="${data.url}" target="_blank">${data.name}</a></h3>
       </div>
     `};
     var box = $("#dh-lottery-history .dh-modal-content");
